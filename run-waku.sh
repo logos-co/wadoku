@@ -140,7 +140,7 @@ kurtosis_run() {
   
   [ -d $FTDIR ] || mkdir -p $FTDIR
   [ -d $LPDIR ] || mkdir -p $LPDIR
-  cd waku
+  #cd waku
   kurtosis clean -a
   docker rm $prefix-$filtr
   docker rm $prefix-$lpush
