@@ -21,7 +21,7 @@ import (
 	//"github.com/waku-org/go-waku/waku/v2/protocol/filter"
 	//"github.com/waku-org/go-waku/waku/v2/protocol"
 
-  //"github.com/0xFugue/wadoku/utils"
+  //"github.com/wadoku/wadoku/utils"
 )
 
 var log = logging.Logger("lightpush")

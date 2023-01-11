@@ -1,4 +1,4 @@
-module github.com/0xFugue/wadoku/waku/lightpush
+module github.com/logos-co/wadoku/waku/lightpush
 
 go 1.18
 

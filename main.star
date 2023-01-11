@@ -1,4 +1,4 @@
-DEFAULT_CONFIG_FILE = "github.com/0xFugue/wadoku/waku/config.json"
+DEFAULT_CONFIG_FILE = "github.com/logos-co/wadoku/waku/config.json"
 
 def get_config_file(args):
     return DEFAULT_CONFIG_FILE if not hasattr(args, "config") else args.config
@@ -24,8 +24,8 @@ def run(args):
         config = struct(
             image = "waku-filter:alpha",
             entrypoint= ["/go/bin/waku-filter"],
-            cmd = [ "-o=" +  "/go/bin/out/filter.out",
-                    "-d=" + "100s",
+            cmd = [ "-o=" + "/go/bin/out/filter.out",
+                    "-d=" + duration,
                     "-i=" + iat ],
         ),
     )
@@ -35,7 +35,7 @@ def run(args):
             image = "waku-lightpush:alpha",
             entrypoint= ["/go/bin/waku-lightpush"],
             cmd = [ "-o=" + "/go/bin/out/lightpush.out",
-                    "-d=" + "100s",
+                    "-d=" + duration,
                     "-i=" + iat ],
         ),
     )

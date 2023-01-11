@@ -144,7 +144,7 @@ kurtosis_run() {
   kurtosis clean -a
   docker rm $prefix-$filtr
   docker rm $prefix-$lpush
-  kurtosis run --enclave-id $enclave main.star '{"config":"github.com/0xFugue/wadoku/waku/config.json"}' > $FTDIR/kurtosis_output.log
+  kurtosis run --enclave-id $enclave main.star '{"config":"github.com/logos-co/wadoku/waku/config.json"}' > $FTDIR/kurtosis_output.log
   sleep 5 
   filtr_suffix="$(kurtosis enclave inspect $enclave | grep $prefix-$filtr | cut -f 1 -d ' ')"
   lpush_suffix="$(kurtosis enclave inspect $enclave | grep $prefix-$lpush | cut -f 1 -d ' ')"

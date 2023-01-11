@@ -1,4 +1,4 @@
-module github.com/0xFugue/wadoku/waku/filter
+module github.com/logos-co/wadoku/waku/filter
 
 go 1.18
 
