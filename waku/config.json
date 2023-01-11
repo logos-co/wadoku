@@ -1,0 +1,7 @@
+{
+  "output_file": "output.out",
+  "duration": "1000s",
+  "iat": "500ms",
+  "mount_target": "/go/bin/out",
+  "log_file": "output.log"
+}
