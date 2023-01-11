@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage(){
-  echo "Usage: ./run.sh   <metal | docker | kurtosis>"
+  echo "Usage: ./run.sh   < clean | metal | docker | kurtosis>"
   exit 1
 }
 
@@ -17,6 +17,17 @@ duration="1000s"
 iat="300ms"
 
 sleep_time=5
+
+clean(){
+  parent=$(pwd)
+  #rm -rf ./data
+  cd waku/$filtr
+  rm $prefix-$filtr
+  cd ..
+  cd $lpush
+  rm $prefix-$lpush
+  cd $parent
+}
 
 build_metal() {
   parent=$(pwd)
@@ -152,12 +163,15 @@ kurtosis_run() {
 
 echo "$# $1"
 [ 1 -eq "$#" ] || usage
-[ metal != $1 -a docker != $1 -a kurtosis != $1 ] && usage
+[ metal != $1 -a docker != $1 -a kurtosis != $1 -a clean != $1 ] && usage
 
 
 
-
-if [ metal = $1 ]; then
+if [ clean = $1 ]; then
+  start $1 
+  clean
+  end $1 
+elif [ metal = $1 ]; then
   build_metal
   start $1 
   metal_run
