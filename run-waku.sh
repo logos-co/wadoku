@@ -12,9 +12,9 @@ prefix="waku"
 docker_op_dir="/go/bin/out"
 enclave="waku-enclave"
 
-content_topic="80fc1f6b30b63bdd0a65df833f1da3fa"
-duration="1000s"
-iat="300ms"
+content_topic="80fc1f6b30b63bdd0a65df833f1da3fa" #just to be unique, a md5 
+duration="1000s"        # run duration is 16.666 mins
+iat="300ms"             # pub msg inter-arrival-time is 300ms
 
 sleep_time=5
 
@@ -29,6 +29,7 @@ clean(){
   cd $parent
 }
 
+
 build_metal() {
   parent=$(pwd)
   cd waku/$filtr
@@ -38,6 +39,7 @@ build_metal() {
   make
   cd $parent
 }
+
 
 build_docker() {
   parent=$(pwd)
@@ -50,15 +52,18 @@ build_docker() {
   wait
 }
 
+
 start() {
   echo "\t\t.........................."
   echo "\t\tBEGINNING THE $1 RUN..."
   echo "\t\t.........................."
 }
 
+
 end() {
   echo "\t\t   $1 RUN DONE..."
 }
+
 
 metal_run() {
   parent=$(pwd)
@@ -69,22 +74,22 @@ metal_run() {
   cd waku/$filtr
   [ -d $FTDIR ] || mkdir -p $FTDIR
   ofname="$FTDIR/$filtr.out"
-  #echo $ofname
   echo -n "starting  $filtr... $pwd "
   ./$prefix-$filtr -o $ofname -d $duration -i $iat > $FTDIR/$filtr.log &  
   echo " done"
   cd ..
   cd lightpush
+
   sleep $sleep_time
+
   [ -d $LPDIR ] || mkdir -p $LPDIR
   ofname="$LPDIR/$lpush.out"
-  #echo $ofnameelapsed
   echo -n "starting  $lpush... "
   ./$prefix-$lpush -o $ofname -d $duration -i $iat > $LPDIR/$lpush.log &
   echo "done"
   cd $parent
   echo "$(date): Waiting for the metal run to finish in $duration"
-  wait
+  wait # wait for runs to complete
 }
 
 
@@ -97,40 +102,32 @@ docker_run() {
   [ -d $FTDIR ] || mkdir -p $FTDIR
   ofname="$FTDIR/$filtr.out"
   echo "docker run $filtr $ofname"
-
   docker rm $prefix-$filtr
   echo "(docker run --name "$prefix-$filtr"  "$prefix-$filtr:alpha" -o /go/bin/out/$filtr.out -d $duration -i $iat > $FTDIR/$filtr.log)"
   docker run --name "$prefix-$filtr"  "$prefix-$filtr:alpha" -o /go/bin/out/$filtr.out -d $duration -i $iat > $FTDIR/$filtr.log &
   echo "$prefix-$filtr is running as $prefix-$filtr"
+
   sleep $sleep_time
-  # docker run '$prefix-$filtr:alpha' -o /go/bin/out/$filtr.out -d $duration -i $iat > $FTDIR/$filtr.log
-  #filtr_cid="$(docker container ls | grep '$prefix-$filtr' | awk '{print $1}')"
-  #docker run  --mount type=bind,source="$FTDIR",target=/go/bin/out  "$filtr:alpha"  -o /go/bin/out/$filtr.out -d $duration -i $iat > $FTDIR/$filtr.log &
- # docker run -d  --entry-point  --mount type=bind,source="$(pwd)/FTDIR",target=/go/bin/out $filtr:alpha 
-  #./filter -o $ofname > filter.log &   
+
   [ -d $LPDIR ] || mkdir -p $LPDIR
   ofname="$LPDIR/$lpush.out"
   echo "docker run $lpush $ofname"
   docker rm $prefix-$lpush
   docker run --name "$prefix-$lpush"  "$prefix-$lpush:alpha" -o /go/bin/out/$lpush.out -d $duration -i $iat > $LPDIR/$lpush.log &
   echo "$prefix-$filtr is running as $prefix-$lpush"
-
- # echo "(docker run  '$prefix-$lpush:alpha' -o /go/bin/out/$lpush.out -d $duration -i $iat > $FTDIR/$filtr.log)"
- # docker run '$prefix-$lpush:alpha' -o /go/bin/out/$lpush.out -d $duration -i $iat > $FTDIR/$filtr.log
-
- # sleep 5
- # lpush_cid="$(docker container ls | grep '$prefix-$filtr' | awk '{print $1}')"
-#  echo "$prefix-$lpush is running as $lpush_cid"
-  #docker run  --mount type=bind,source="$LPDIR",target=/go/bin/out  "$lpush:alpha"  -o /go/bin/out/$lpush.out -d $duration -i $iat > $LPDIR/$lpush.log &
   cd $parent
+
+  # now wait for runs to complete...
   echo "$(date): Waiting for the docker run to finish in $duration"
   status_code="$(docker container wait $prefix-$filtr $prefix-$lpush)"
+
+  # copy the output files
   echo "Status code of docker run: ${status_code}"
   echo "$(date): copying output files from docker"
-  docker cp "$filtr_cid:/go/bin/out/$filtr.out" $FTDIR
-  docker cp "$lpush_cid:/go/bin/out/$lpush.out" $LPDIR
- # docker cp "$lpush_cid:/go/bin/out" $LPDIR
+  docker cp "$prefix-$filtr:/go/bin/out/$filtr.out" $FTDIR
+  docker cp "$prefix-$lpush:/go/bin/out/$lpush.out" $LPDIR
 }
+
 
 kurtosis_run() {
   parent=$(pwd)
@@ -144,27 +141,30 @@ kurtosis_run() {
   kurtosis clean -a
   docker rm $prefix-$filtr
   docker rm $prefix-$lpush
+
   kurtosis run --enclave-id $enclave main.star '{"config":"github.com/logos-co/wadoku/waku/config.json"}' > $FTDIR/kurtosis_output.log
-  sleep 5 
+  sleep $sleep_time 
   filtr_suffix="$(kurtosis enclave inspect $enclave | grep $prefix-$filtr | cut -f 1 -d ' ')"
   lpush_suffix="$(kurtosis enclave inspect $enclave | grep $prefix-$lpush | cut -f 1 -d ' ')"
+
+  # now wait for runs to complete...
   filtr_cid="$enclave--user-service--$filtr_suffix"
   lpush_cid="$enclave--user-service--$lpush_suffix"
   echo "created $filtr_cid, $lpush_cid..."
   echo "$(date): Waiting for the kurtosis run to finish in $duration"
   status_code="$(docker container wait $filtr_cid $lpush_cid)"
   echo "Status code of the kurtosis run: ${status_code}"
+  
+  # copy the output files
   docker cp "$filtr_cid:/go/bin/out/$filtr.out" $FTDIR
   docker cp "$lpush_cid:/go/bin/out/$lpush.out" $LPDIR
   cd $parent
-  #filtr_cid="$(docker container ls | grep '$prefix-$filtr' | awk '{print $1}')"
-  #lpush_cid="$(docker container ls | grep '$prefix-$lpush' | awk '{print $1}')"
 }
+
 
 echo "$# $1"
 [ 1 -eq "$#" ] || usage
 [ metal != $1 -a docker != $1 -a kurtosis != $1 -a clean != $1 ] && usage
-
 
 
 if [ clean = $1 ]; then
@@ -192,8 +192,21 @@ else
   usage
 fi
 
+# debris
 
-#[ 'kurtosis' = '$1' ] || run_kurtosis
+# docker run '$prefix-$filtr:alpha' -o /go/bin/out/$filtr.out -d $duration -i $iat > $FTDIR/$filtr.log
+  #filtr_cid="$(docker container ls | grep '$prefix-$filtr' | awk '{print $1}')"
+  #docker run  --mount type=bind,source="$FTDIR",target=/go/bin/out  "$filtr:alpha"  -o /go/bin/out/$filtr.out -d $duration -i $iat > $FTDIR/$filtr.log &
+ # docker run -d  --entry-point  --mount type=bind,source="$(pwd)/FTDIR",target=/go/bin/out $filtr:alpha 
+  #./filter -o $ofname > filter.log &
 
+   # echo "(docker run  '$prefix-$lpush:alpha' -o /go/bin/out/$lpush.out -d $duration -i $iat > $FTDIR/$filtr.log)"
+ # docker run '$prefix-$lpush:alpha' -o /go/bin/out/$lpush.out -d $duration -i $iat > $FTDIR/$filtr.log
 
-#docker run -d   --mount type=bind,source="$(pwd)/target",target=/go/bin\  lightpush:alpha 
+ # sleep 5
+ # lpush_cid="$(docker container ls | grep '$prefix-$filtr' | awk '{print $1}')"
+#  echo "$prefix-$lpush is running as $lpush_cid"
+  #docker run  --mount type=bind,source="$LPDIR",target=/go/bin/out  "$lpush:alpha"  -o /go/bin/out/$lpush.out -d $duration -i $iat > $LPDIR/$lpush.log &
+
+  #filtr_cid="$(docker container ls | grep '$prefix-$filtr' | awk '{print $1}')"
+  #lpush_cid="$(docker container ls | grep '$prefix-$lpush' | awk '{print $1}')"
