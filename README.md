@@ -1,4 +1,4 @@
-# wadoku
+# wadoku = `wa`ku  + `do`cker + `ku`rtosis runs
 This repo houses the code for initial runs to assess overhead of running waku nodes on bare metal, docker or kurtosis. The waku nodes are specifically chosen to be non-full nodes to minimise protocol cross talk.
 
 Bare metal run is done, docker run is done. kurtosis run is more or less done. Will run some sanity check runs, and add the plots soonish .
