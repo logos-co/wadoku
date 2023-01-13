@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"bytes"
+	"encoding/binary"
 	"os"
 	"time"
 
@@ -28,7 +30,10 @@ var log = logging.Logger("lightpush")
 const NameServer = "1.1.1.1" // your local dns provider might be blocking entr
 const DnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
 
+var seqNumber int32 = 0
+
 type Config struct {
+	LogLevel     string
 	Ofname       string
 	ContentTopic string
 	Iat          time.Duration
@@ -44,6 +49,8 @@ func init() {
 		"Specify the duration (1s,2m,4h)")
 	flag.DurationVar(&conf.Iat, "i", 100*time.Millisecond,
 		"Specify the interarrival time in millisecs")
+  flag.StringVar(&conf.LogLevel, "l", "info",
+		"Specify the log level")
 	flag.StringVar(&conf.Ofname, "o", "lightpush.out",
 		"Specify the output file")
 	flag.StringVar(&conf.ContentTopic, "c", "d608b04e6b6fd7006afdfe916f08b5d",
@@ -55,7 +62,7 @@ func main() {
 	flag.Parse()
 
 	// setup the log  
-	lvl, err := logging.LevelFromString("info")
+	lvl, err := logging.LevelFromString(conf.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -74,8 +81,9 @@ func main() {
 		panic(err)
 	}
 
+  log.Info("config: ", conf)
 	// find the list of full node fleet peers
-	fmt.Printf("attempting DNS discovery with %s\n", DnsDiscoveryUrl)
+  log.Info("attempting DNS discovery with: ", DnsDiscoveryUrl)
 	nodes, err := dnsdisc.RetrieveNodes(ctx, DnsDiscoveryUrl, dnsdisc.WithNameserver(NameServer))
 	if err != nil {
 		panic(err.Error())
@@ -86,23 +94,24 @@ func main() {
 	for _, n := range nodes {
 		nodeList = append(nodeList, n.Addresses...)
 	}
-	fmt.Printf("Discovered and connecting to %v \n", nodeList[0])
+  log.Info("Discovered and connecting to: ", nodeList[0])
 	peerID, err := nodeList[0].ValueForProtocol(multiaddr.P_P2P)
 	if err != nil {
-		fmt.Printf("could not connect to %s: %s \n", peerID, err)
+    log.Error("could not get peerID: ", err)
 		panic(err)
 	}
 
 	err = lightNode.DialPeerWithMultiAddress(ctx, nodeList[0])
 	if err != nil {
-		fmt.Printf("could not connect to %s: %s \n", peerID, err)
+		log.Error("could not connect to ", peerID, err)
 		panic(err)
 	}
 
-	fmt.Println("STARTING THE LIGHTNODE ", conf.ContentTopic)
+	log.Info("STARTING THE LIGHTPUSH NODE ", conf.ContentTopic)
 	// start the light node
 	err = lightNode.Start()
 	if err != nil {
+		log.Error("COULD NOT START THE LIGHTPUSH ", peerID, err)
 		panic(err)
 	}
 
@@ -115,23 +124,33 @@ func main() {
 }
 
 func writeLoop(ctx context.Context, conf *Config, wakuNode *node.WakuNode) {
-	fmt.Println("STARTING THE WRITELOOP ", conf.ContentTopic)
+	log.Info("STARTING THE WRITELOOP ", conf.ContentTopic)
 
 	f, err := os.OpenFile(conf.Ofname, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
+    log.Error("Could not open file: ", err)
 		panic(err)
 	}
 	defer f.Close()
 
 	for {
 		time.Sleep(conf.Iat)
+    seqNumber++
 
-		// build the message
+		// build the message & seq number
 		p := new(payload.Payload)
+    wbuf := new(bytes.Buffer)
+    err := binary.Write(wbuf, binary.LittleEndian, seqNumber)
+    if err != nil {
+        log.Error("binary.Write failed:", err)
+        panic(err)
+    }
+    p.Data = wbuf.Bytes()
 		var version uint32 = 0
 		payload, err := p.Encode(version)
 		if err != nil {
 			log.Error("Could not Encode: ", err)
+      panic(err)
 		}
 		msg := &pb.WakuMessage{
 			Payload:      payload,
@@ -151,6 +170,6 @@ func writeLoop(ctx context.Context, conf *Config, wakuNode *node.WakuNode) {
 		if _, err = f.WriteString(str); err != nil {
 			panic(err)
 		}
-		fmt.Println("PUBLISHED/PUSHED...", msg)
+		log.Info("PUBLISHED/PUSHED... ", seqNumber, msg)
 	}
 }

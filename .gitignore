@@ -20,8 +20,13 @@ rlnCredentials.txt
 *.aar
 *.jar
 
+# output/log dir and files
 pkg/*
 data/*
+filter.out
+lightpush.out
+filter.log
+lightpush.log
 
 # output binaries
 waku-lightpush

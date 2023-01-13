@@ -1,8 +1,8 @@
 {
   "output_file": "output.out",
-  "duration": "1000s",
+  "duration": "4000s",
   "iat": "300ms",
-  "mount_src": "/go/bin/out",
-  "mount_target": "/go/bin/out",
+  "content_topic": "2023-01-13-23h49m02s-4000s-300ms",
+  "log_level": "info",
   "log_file": "output.log"
 }

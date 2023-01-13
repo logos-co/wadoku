@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"net"
+  "bytes"
+	"encoding/binary"
 	"os"
 	"time"
 
@@ -29,6 +31,7 @@ const dnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZW
 const nameServer = "1.1.1.1" // your local dns provider might be blocking entr
 
 type Config struct {
+	LogLevel     string
 	Ofname       string
 	ContentTopic string
 	Iat          time.Duration
@@ -42,8 +45,10 @@ func init() {
   fmt.Println("Populating CLI params...")
 	flag.DurationVar(&conf.Duration, "d", 1000*time.Second,
 		"Specify the duration (1s,2m,4h)")
-	flag.DurationVar(&conf.Iat, "i", 100*time.Millisecond,
+	flag.DurationVar(&conf.Iat, "i", 300*time.Millisecond,
 		"Specify the interarrival time in millisecs")
+	flag.StringVar(&conf.LogLevel, "l", "info",
+		"Specify the log level")
 	flag.StringVar(&conf.Ofname, "o", "lightpush.out",
 		"Specify the output file")
 	flag.StringVar(&conf.ContentTopic, "c", "d608b04e6b6fd7006afdfe916f08b5d",
@@ -55,7 +60,7 @@ func main() {
 	flag.Parse()
 
 	// setup the log
-	lvl, err := logging.LevelFromString("info")
+	lvl, err := logging.LevelFromString(conf.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -73,8 +78,9 @@ func main() {
 		panic(err)
 	}
 
+  log.Info("CONFIG : ", conf)
 	// find the list of full node fleet peers
-	fmt.Printf("attempting DNS discovery with %s\n", dnsDiscoveryUrl)
+  log.Info("attempting DNS discovery with: ", dnsDiscoveryUrl)
 	nodes, err := dnsdisc.RetrieveNodes(ctx, dnsDiscoveryUrl, dnsdisc.WithNameserver(nameServer))
 	if err != nil {
 		panic(err.Error())
@@ -85,26 +91,27 @@ func main() {
 	for _, n := range nodes {
 		nodeList = append(nodeList, n.Addresses...)
 	}
-	fmt.Printf("Discovered and connecting to %v \n", nodeList[0])
+  log.Info("Discovered and connecting to: ", nodeList[0])
 	peerID, err := nodeList[0].ValueForProtocol(multiaddr.P_P2P)
 	if err != nil {
-		fmt.Printf("could not get peerID: %s \n", err)
+		log.Error("could not get peerID: ", err)
 		panic(err)
 	}
 	err = lightNode.DialPeerWithMultiAddress(ctx, nodeList[0])
 	if err != nil {
-		fmt.Printf("could not connect to %s: %s \n", peerID, err)
+		log.Error("could not connect to ", peerID, err)
 		panic(err)
 	}
 
-	fmt.Println("STARTING THE LIGHTNODE ", conf.ContentTopic)
+	log.Info("STARTING THE FILTER NODE ", conf.ContentTopic)
 	// start the light node
 	err = lightNode.Start()
 	if err != nil {
+	  log.Error("COULD NOT START THE FILTER NODE ", conf.ContentTopic)
 		panic(err)
 	}
 
-	fmt.Println("SUBSCRIBING TO THE TOPIC ", conf.ContentTopic)
+	log.Info("SUBSCRIBING TO THE TOPIC ", conf.ContentTopic)
 	// Subscribe to our ContentTopic and send a FilterRequest
 	cf := filter.ContentFilter{
 		Topic:         pubSubTopic.String(),
@@ -119,6 +126,7 @@ func main() {
 	go func() {
 		f, err := os.OpenFile(conf.Ofname, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
+      log.Error("Could not open file: ", err)
 			panic(err)
 		}
 		defer f.Close()
@@ -126,7 +134,17 @@ func main() {
 		for env := range theFilter.Chan {
 			msg := env.Message()
 			log.Info("Light node received msg, ", string(msg.Payload))
-			str := fmt.Sprintf("Received msg, @", string(msg.ContentTopic), "@", msg.Timestamp, "@", utils.GetUnixEpochFrom(lightNode.Timesource().Now()))
+
+      rbuf := bytes.NewBuffer(msg.Payload)
+      var r32 int32 //:= make([]int64, (len(msg.Payload)+7)/8)
+      err = binary.Read(rbuf, binary.LittleEndian, &r32)
+      if err != nil {
+        log.Error("binary.Read failed:", err)
+        panic(err)
+      }
+
+      msg_delay := time.Since(time.Unix(0, msg.Timestamp))
+			str := fmt.Sprintf("Received msg, @", r32, "@", string(msg.ContentTopic), "@", msg.Timestamp, "@", utils.GetUnixEpochFrom(lightNode.Timesource().Now()), "@", msg_delay.Microseconds(), "@", msg_delay.Milliseconds() )
 			log.Info(str)
 			//"Received msg, @", string(msg.ContentTopic), "@", msg.Timestamp, "@", utils.GetUnixEpochFrom(lightNode.Timesource().Now()) )
 			if _, err = f.WriteString(str + "\n"); err != nil {

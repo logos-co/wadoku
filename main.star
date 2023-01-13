@@ -15,8 +15,8 @@ def run(args):
     output_file = config['output_file']
     duration = config['duration']
     iat = config['iat']
-    mount_src = config['mount_src']
-    mount_dst = config['mount_target']
+    loglvl = config['log_level']
+    ctopic = config['content_topic']
     print(config)
 
     waku_filtr = add_service(
@@ -26,6 +26,8 @@ def run(args):
             entrypoint= ["/go/bin/waku-filter"],
             cmd = [ "-o=" + "/go/bin/out/filter.out",
                     "-d=" + duration,
+                    "-c=" + ctopic,
+                    "-l=" + loglvl,
                     "-i=" + iat ],
         ),
     )
@@ -36,6 +38,8 @@ def run(args):
             entrypoint= ["/go/bin/waku-lightpush"],
             cmd = [ "-o=" + "/go/bin/out/lightpush.out",
                     "-d=" + duration,
+                    "-c=" + ctopic,
+                    "-l=" + loglvl,
                     "-i=" + iat ],
         ),
     )
