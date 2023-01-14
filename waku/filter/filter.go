@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
   "bytes"
+ // "math/rand"
+  "strconv"
 	"encoding/binary"
 	"os"
 	"time"
@@ -17,6 +19,7 @@ import (
 	"github.com/waku-org/go-waku/waku/v2/protocol"
 	"github.com/waku-org/go-waku/waku/v2/protocol/filter"
 	"github.com/waku-org/go-waku/waku/v2/utils"
+	"github.com/logos-co/wadoku/waku/common"
 	//"crypto/rand"
 	//"encoding/hex"
 	//"github.com/ethereum/go-ethereum/crypto"
@@ -26,33 +29,16 @@ import (
 
 var log = logging.Logger("filter")
 var pubSubTopic = protocol.DefaultPubsubTopic()
+var conf = common.Config{}
 
-const dnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
-const nameServer = "1.1.1.1" // your local dns provider might be blocking entr
+//const dnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
+//const nameServer = "1.1.1.1" // your local dns provider might be blocking entr
 
-type Config struct {
-	LogLevel     string
-	Ofname       string
-	ContentTopic string
-	Iat          time.Duration
-	Duration     time.Duration
-}
-
-var conf = Config{}
 
 func init() {
 	// args
   fmt.Println("Populating CLI params...")
-	flag.DurationVar(&conf.Duration, "d", 1000*time.Second,
-		"Specify the duration (1s,2m,4h)")
-	flag.DurationVar(&conf.Iat, "i", 300*time.Millisecond,
-		"Specify the interarrival time in millisecs")
-	flag.StringVar(&conf.LogLevel, "l", "info",
-		"Specify the log level")
-	flag.StringVar(&conf.Ofname, "o", "lightpush.out",
-		"Specify the output file")
-	flag.StringVar(&conf.ContentTopic, "c", "d608b04e6b6fd7006afdfe916f08b5d",
-		"Specify the content topic")
+  common.ArgInit(&conf)
 }
 
 func main() {
@@ -66,8 +52,9 @@ func main() {
 	}
 	logging.SetAllLoggers(lvl)
 
+   tcpEndPoint :=  "0.0.0.0:" + strconv.Itoa(common.StartPort + common.RandInt(0, common.Offset))
 	// create the waku node
-	hostAddr, _ := net.ResolveTCPAddr("tcp", "0.0.0.0:60000")
+	hostAddr, _ := net.ResolveTCPAddr("tcp", tcpEndPoint)
 	ctx := context.Background()
 	lightNode, err := node.New(ctx,
 		//node.WithWakuRelay(),
@@ -80,8 +67,8 @@ func main() {
 
   log.Info("CONFIG : ", conf)
 	// find the list of full node fleet peers
-  log.Info("attempting DNS discovery with: ", dnsDiscoveryUrl)
-	nodes, err := dnsdisc.RetrieveNodes(ctx, dnsDiscoveryUrl, dnsdisc.WithNameserver(nameServer))
+  log.Info("attempting DNS discovery with: ", common.DnsDiscoveryUrl)
+	nodes, err := dnsdisc.RetrieveNodes(ctx, common.DnsDiscoveryUrl, dnsdisc.WithNameserver(common.NameServer))
 	if err != nil {
 		panic(err.Error())
 	}
