@@ -1,8 +1,8 @@
 {
   "output_file": "output.out",
-  "duration": "4000s",
-  "iat": "300ms",
-  "content_topic": "2023-01-13-23h49m02s-4000s-300ms",
+  "duration": "2000s",
+  "iat": "100ms",
+  "content_topic": "2000s-100ms-2023-01-18-14h33m38s-XYZ",
   "log_level": "info",
   "log_file": "output.log"
 }

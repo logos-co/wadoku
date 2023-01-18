@@ -12,17 +12,22 @@ lpush="lightpush"
 # file/dir locations
 prefix="waku"
 docker_op_dir="/go/bin/out"
-enclave="waku-enclave"
+enclave="enclave-waku"
 host_output_dir="/home1/mimosa/runs"
 
 # params for the run
 ctopic="8fc1f6b30b63bdd0a65df833f1da3fa"  # default ctopic, a md5 
 duration="100s"                           # duration of the run
-iat="300ms"                               # pub msg inter-arrival-time
+iat="100ms"                               # pub msg inter-arrival-time
 loglvl="info"                             # log level
 
-sleep_time=5
+duration=$2
+#iat=$3
+
+sleep_time=30
 time=""
+
+unique="XYZ"
 
 clean(){
   parent=$(pwd)           # no pushd / popd
@@ -61,7 +66,7 @@ build_docker() {
 
 start() {
   time="$(\date +"%Y-%m-%d-%Hh%Mm%Ss")"
-  ctopic="$duration-$iat-$time"
+  ctopic="$duration-$iat-$time-$unique"
   echo "\t\t.............................................."
   echo "\t\tBEGINNING THE $1 RUN @ $time"
   echo "\t\tparams: $ctopic"
@@ -71,7 +76,7 @@ start() {
 
 end() {
   echo "\t\t   $1 RUN DONE @ $(\date +"%Y-%m-%d-%Hh%Mm%Ss") "
-  echo "\t\t   params: $time, $duration, $iat-$ctopic"
+  echo "\t\t   params: $ctopic"
 }
 
 
@@ -112,22 +117,30 @@ docker_run() {
   #FTDIR="$host_output_dir/data/docker/$time"
   #LPDIR="$host_output_dir/data/docker/$time"
 
-  [ -d $FTDIR ] || mkdir -p $FTDIR
-  ofname="$FTDIR/$filtr.out"
-  echo "docker run $filtr $ofname"
-  docker rm $prefix-$filtr
-  docker run --network=host --name "$prefix-$filtr"  "$prefix-$filtr:alpha" -o "$docker_op_dir/$filtr.out" -d $duration -l $loglvl -i $iat > $FTDIR/$filtr.log &
-  echo "$prefix-$filtr is running as $prefix-$filtr"
+  #darg= "--network=host"
 
-  sleep $sleep_time
-
+   
   [ -d $LPDIR ] || mkdir -p $LPDIR
   ofname="$LPDIR/$lpush.out"
-  echo "docker run $lpush $ofname"
+  echo "docker: stopping and removing $prefix-$lpush"
+  docker stop $prefix-$lpush
   docker rm $prefix-$lpush
-  docker run --network=host --name "$prefix-$lpush"  "$prefix-$lpush:alpha" -o "$docker_op_dir/$lpush.out" -d $duration -i $iat -l $loglvl -c $ctopic> $LPDIR/$lpush.log &
-  echo "$prefix-$filtr is running as $prefix-$lpush"
-  cd $parent
+  echo "docker: starting $prefix-$lpush"
+  echo " docker run --name "$prefix-$lpush" -d=true "$prefix-$lpush:alpha" -o "$docker_op_dir/$lpush.out" -d $duration -i $iat -l $loglvl -c $ctopic"
+  docker run --name "$prefix-$lpush" -d=true "$prefix-$lpush:alpha" -o "$docker_op_dir/$lpush.out" -d $duration -i $iat -l $loglvl -c $ctopic 
+
+  #sleep $sleep_time
+
+  [ -d $FTDIR ] || mkdir -p $FTDIR
+  ofname="$FTDIR/$filtr.out"
+  echo "docker: stopping and removing $prefix-$filtr"
+  docker stop $prefix-$filtr
+  docker rm $prefix-$filtr
+  echo "docker: starting $prefix-$filtr"
+  echo "docker run --name "$prefix-$filtr" -d=true "$prefix-$filtr:alpha" -o "$docker_op_dir/$filtr.out" -d $duration -l $loglvl -i $iat -c $ctopic "
+  docker run --name "$prefix-$filtr" -d=true  "$prefix-$filtr:alpha" -o "$docker_op_dir/$filtr.out" -d $duration -l $loglvl -i $iat -c $ctopic 
+  echo "$prefix-$filtr is running as $prefix-$filtr"
+
 
   # now wait for runs to complete...
   echo "$(date): Waiting for the docker run to finish in $duration"
@@ -136,10 +149,11 @@ docker_run() {
   # copy the output files
   echo "Status code of docker run: ${status_code}"
   echo "$(date): copying output files from docker"
-  docker logs $prefix-$filtr > "$FTDIR/$filtr-docker.log"
-  docker logs $prefix-$lpush > "$LPDIR/$lpush-docker.log"
+  docker logs $prefix-$filtr > "$FTDIR/$filtr.log"
+  docker logs $prefix-$lpush > "$LPDIR/$lpush.log"
   docker cp "$prefix-$filtr:$docker_op_dir/$filtr.out" $FTDIR
   docker cp "$prefix-$lpush:$docker_op_dir/$lpush.out" $LPDIR
+  cd $parent
 }
 
 
@@ -185,14 +199,14 @@ kurtosis_run() {
   docker logs $filtr_cid > $FTDIR/$filtr.log
   docker cp "$lpush_cid:/go/bin/out/$lpush.out" $LPDIR
   docker logs $lpush_cid > $LPDIR/$lpush.log
-  kurtosis enclave dump $enclave $FTDIR/kurtosis_dump
+  #kurtosis enclave dump $enclave $FTDIR/kurtosis_dump
   echo "Status code of the kurtosis run: ${status_code}"
   cd $parent
 }
 
 
-echo "$# $1"
-[ 1 -eq "$#" ] || usage
+echo "$# $1 $2"
+[ 2 -eq "$#" ] || usage
 [ metal != $1 -a docker != $1 -a kurtosis != $1 -a clean != $1 ] && usage
 
 

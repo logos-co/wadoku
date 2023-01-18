@@ -1,8 +1,0 @@
-{
-  "output_file": "lightpush.out",
-  "duration": "1000s",
-  "iat": "500ms",
-  "mount_src": "./data",
-  "mount_target": "/go/bin/out",
-  "log_file": "lightpush.log"
-}

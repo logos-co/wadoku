@@ -1,4 +1,4 @@
-package common 
+package common
 
 import (
   "time"
@@ -7,10 +7,11 @@ import (
 )
 
 const StartPort = 60000
-const Offset = 1000
+const PortRange = 1000
 
 const DnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
 const NameServer = "1.1.1.1"
+const LocalHost = "0.0.0.0"
 
 type Config struct {
 	LogLevel     string

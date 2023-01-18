@@ -17,7 +17,7 @@ import (
 	"github.com/waku-org/go-waku/waku/v2/dnsdisc"
 	"github.com/waku-org/go-waku/waku/v2/node"
 	"github.com/waku-org/go-waku/waku/v2/protocol"
-	"github.com/waku-org/go-waku/waku/v2/protocol/filter"
+//	"github.com/waku-org/go-waku/waku/v2/protocol/filter"
 //	"github.com/waku-org/go-waku/waku/v2/utils"
 	"github.com/logos-co/wadoku/waku/common"
 	//"crypto/rand"
@@ -27,10 +27,10 @@ import (
 	//"github.com/waku-org/go-waku/waku/v2/payload"
 )
 
-var log = logging.Logger("filter")
+var log = logging.Logger("subscribe")
 var pubSubTopic = protocol.DefaultPubsubTopic()
 var conf = common.Config{}
-var nodeType = "filter"
+
 //const dnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
 //const nameServer = "1.1.1.1" // your local dns provider might be blocking entr
 
@@ -52,17 +52,15 @@ func main() {
 	}
 	logging.SetAllLoggers(lvl)
 
-  tcpEndPoint :=  common.LocalHost +
-                      ":" +
-                      strconv.Itoa(common.StartPort + common.RandInt(0, common.PortRange))
+   tcpEndPoint :=  "0.0.0.0:" + strconv.Itoa(common.StartPort + common.RandInt(0, common.Offset))
 	// create the waku node
 	hostAddr, _ := net.ResolveTCPAddr("tcp", tcpEndPoint)
 	ctx := context.Background()
-	filterNode, err := node.New(ctx,
-		//node.WithWakuRelay(),
-		//node.WithNTP(),  // don't use NTP, fails at msec granularity    
+	wakuNode, err := node.New(ctx,
+    //node.WithNTP(),  // don't use NTP, fails at msec granularity
+		node.WithWakuRelay(),
 		node.WithHostAddress(hostAddr),
-		node.WithWakuFilter(false), // we do NOT want a full node
+		node.WithWakuFilter(false),
 	)
 	if err != nil {
 		panic(err)
@@ -87,27 +85,27 @@ func main() {
 		log.Error("could not get peerID: ", err)
 		panic(err)
 	}
-	err = filterNode.DialPeerWithMultiAddress(ctx, nodeList[0])
+	err = wakuNode.DialPeerWithMultiAddress(ctx, nodeList[0])
 	if err != nil {
 		log.Error("could not connect to ", peerID, err)
 		panic(err)
 	}
 
-	log.Info("Starting the ", nodeType, " node ", conf.ContentTopic)
-	// start the light node
-	err = filterNode.Start()
+	log.Info("STARTING THE SUB NODE ", conf.ContentTopic)
+	// start the sub node
+	err = wakuNode.Start()
 	if err != nil {
-	  log.Error("Could not start the", nodeType, " node ", conf.ContentTopic)
+	  log.Error("COULD NOT START THE SUB NODE ", conf.ContentTopic)
 		panic(err)
 	}
 
-	log.Info("Subscribing to the content topic", conf.ContentTopic)
-	// Subscribe to our ContentTopic and send a FilterRequest
-	cf := filter.ContentFilter{
+	log.Info("SUBSCRIBING TO THE TOPIC ", conf.ContentTopic)
+	// Subscribe to our ContentTopic and send Sub Request
+	/*cf := filter.ContentFilter{
 		Topic:         pubSubTopic.String(),
 		ContentTopics: []string{conf.ContentTopic},
-	}
-	_, theFilter, err := filterNode.Filter().Subscribe(ctx, cf)
+	}*/
+	sub, err := wakuNode.Relay().Subscribe(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -122,9 +120,12 @@ func main() {
 		defer f.Close()
 
 		log.Info("Waiting to receive the message")
-		for env := range theFilter.Chan {
+		for env := range sub.C {
 			msg := env.Message()
 
+      if msg.ContentTopic != conf.ContentTopic {
+        continue
+      }
       rbuf := bytes.NewBuffer(msg.Payload)
       var r32 int32 //:= make([]int64, (len(msg.Payload)+7)/8)
       err = binary.Read(rbuf, binary.LittleEndian, &r32)
@@ -133,8 +134,8 @@ func main() {
         panic(err)
       }
 
-      msg_delay := time.Since(time.Unix(0, msg.Timestamp))
-      str := fmt.Sprintf("GOT : %d %s %d %d\n", r32, msg, msg_delay.Microseconds(), msg_delay.Milliseconds())
+      rtt := time.Since(time.Unix(0, msg.Timestamp))
+      str := fmt.Sprintf("GOT: %d %s %d %d\n", r32, msg, rtt.Microseconds(), rtt.Milliseconds())
       //str := fmt.Sprintf("GOT: %d %s %s %s %s\n", r32, msg, utils.GetUnixEpochFrom(lightNode.Timesource().Now()), msg_delay.Microseconds(), msg_delay.Milliseconds())
 			//"Received msg, @", string(msg.ContentTopic), "@", msg.Timestamp, "@", utils.GetUnixEpochFrom(lightNode.Timesource().Now()) )
 			log.Info(str)
@@ -142,13 +143,13 @@ func main() {
 				panic(err)
 			}
 		}
-    log.Error("Out of the Write loop: Message channel closed - timeout")
+    log.Error("Out of the Write loop: Message channel closed (timeout?)!")
 		stopC <- struct{}{}
 	}()
 
   <-time.After(conf.Duration)
-  log.Error(conf.Duration, " elapsed, closing the " + nodeType + " node!");
+  log.Error(conf.Duration, " elapsed, closing the node!");
 
 	// shut the nodes down
-	filterNode.Stop()
+	wakuNode.Stop()
 }
