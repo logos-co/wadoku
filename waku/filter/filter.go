@@ -145,8 +145,13 @@ func main() {
     log.Error("Out of the Write loop: Message channel closed - timeout")
 		stopC <- struct{}{}
 	}()
+  // add extra 20sec + 5% as a grace period to receive as much as possible
+  filterWait := conf.Duration +
+                    common.InterPubSubDelay * time.Second +
+                    conf.Duration/100*common.GraceWait
 
-  <-time.After(conf.Duration)
+  log.Info("Will be waiting for ", filterWait,  ", excess ", common.GraceWait, "% from ", conf.Duration)
+  <-time.After(filterWait)
   log.Error(conf.Duration, " elapsed, closing the " + nodeType + " node!");
 
 	// shut the nodes down

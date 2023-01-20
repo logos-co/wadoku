@@ -24,7 +24,7 @@ loglvl="info"                             # log level
 duration=$2
 #iat=$3
 
-sleep_time=30
+sleep_time=20
 time=""
 
 unique="XYZ"
@@ -119,18 +119,6 @@ docker_run() {
 
   #darg= "--network=host"
 
-   
-  [ -d $LPDIR ] || mkdir -p $LPDIR
-  ofname="$LPDIR/$lpush.out"
-  echo "docker: stopping and removing $prefix-$lpush"
-  docker stop $prefix-$lpush
-  docker rm $prefix-$lpush
-  echo "docker: starting $prefix-$lpush"
-  echo " docker run --name "$prefix-$lpush" -d=true "$prefix-$lpush:alpha" -o "$docker_op_dir/$lpush.out" -d $duration -i $iat -l $loglvl -c $ctopic"
-  docker run --name "$prefix-$lpush" -d=true "$prefix-$lpush:alpha" -o "$docker_op_dir/$lpush.out" -d $duration -i $iat -l $loglvl -c $ctopic 
-
-  #sleep $sleep_time
-
   [ -d $FTDIR ] || mkdir -p $FTDIR
   ofname="$FTDIR/$filtr.out"
   echo "docker: stopping and removing $prefix-$filtr"
@@ -140,6 +128,17 @@ docker_run() {
   echo "docker run --name "$prefix-$filtr" -d=true "$prefix-$filtr:alpha" -o "$docker_op_dir/$filtr.out" -d $duration -l $loglvl -i $iat -c $ctopic "
   docker run --name "$prefix-$filtr" -d=true  "$prefix-$filtr:alpha" -o "$docker_op_dir/$filtr.out" -d $duration -l $loglvl -i $iat -c $ctopic 
   echo "$prefix-$filtr is running as $prefix-$filtr"
+
+  sleep $sleep_time
+   
+  [ -d $LPDIR ] || mkdir -p $LPDIR
+  ofname="$LPDIR/$lpush.out"
+  echo "docker: stopping and removing $prefix-$lpush"
+  docker stop $prefix-$lpush
+  docker rm $prefix-$lpush
+  echo "docker: starting $prefix-$lpush"
+  echo " docker run --name "$prefix-$lpush" -d=true "$prefix-$lpush:alpha" -o "$docker_op_dir/$lpush.out" -d $duration -i $iat -l $loglvl -c $ctopic"
+  docker run --name "$prefix-$lpush" -d=true "$prefix-$lpush:alpha" -o "$docker_op_dir/$lpush.out" -d $duration -i $iat -l $loglvl -c $ctopic 
 
 
   # now wait for runs to complete...
@@ -183,7 +182,9 @@ kurtosis_run() {
 }" > waku/config.json
 
   kurtosis run --enclave-id $enclave . '{"config":"github.com/logos-co/wadoku/waku/config.json"}' > $FTDIR/kurtosis_output.log
-  sleep $sleep_time 
+
+  sleep $sleep_time
+
   filtr_suffix="$(kurtosis enclave inspect $enclave | grep $prefix-$filtr | cut -f 1 -d ' ')"
   lpush_suffix="$(kurtosis enclave inspect $enclave | grep $prefix-$lpush | cut -f 1 -d ' ')"
 

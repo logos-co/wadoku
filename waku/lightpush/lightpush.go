@@ -63,7 +63,7 @@ func main() {
 		node.WithHostAddress(hostAddr),
 		//node.WithNTP(),  // don't use NTP, fails at msec granularity
 		node.WithWakuRelay(),
-		node.WithLightPush(),
+		//node.WithLightPush(), // no need to add lightpush to be a lightpush client! 
 	)
 	if err != nil {
 		panic(err)
