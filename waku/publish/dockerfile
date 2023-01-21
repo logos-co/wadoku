@@ -1,0 +1,16 @@
+# Specifies a parent image
+FROM golang:1.18
+
+# Create the app directory to hold app’s source code
+
+ADD ./waku-publish /go/bin/waku-publish
+RUN mkdir -p /go/bin/out
+
+ADD ./publish.go /go/src/publish.go
+ADD go.mod go.sum /go/src/
+
+# Tells Docker which network port your container listens on
+EXPOSE 8080
+
+# Specifies the executable command that runs when the container starts
+ENTRYPOINT [ "/go/bin/waku-publish" ]
