@@ -3,11 +3,11 @@ FROM golang:1.18
 
 # Create the app directory to hold app’s source code
 
-ADD waku-subscribe /go/bin/waku-subscribe
+ADD ./waku-subscribe /go/bin/waku-subscribe
 RUN umask -S 202
 RUN mkdir -p /go/bin/out
 
-ADD subscribe.go /go/src/subscribe.go
+ADD ./subscribe.go /go/src/subscribe.go
 ADD go.mod go.sum /go/src/
 
 # Tells Docker which network port your container listens on

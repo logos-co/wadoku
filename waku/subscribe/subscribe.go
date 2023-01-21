@@ -120,6 +120,10 @@ func main() {
 		log.Info("Waiting to receive the message")
 		for env := range theSub.C {
 			msg := env.Message()
+      // ignore other relay messages
+      if msg.ContentTopic != conf.ContentTopic {
+        continue
+      }
 
       rbuf := bytes.NewBuffer(msg.Payload)
       var r32 int32 //:= make([]int64, (len(msg.Payload)+7)/8)
