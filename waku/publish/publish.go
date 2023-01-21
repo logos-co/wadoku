@@ -30,9 +30,10 @@ import (
   //"github.com/wadoku/wadoku/utils"
 )
 
-var log = logging.Logger("lightpush")
+var log = logging.Logger("publish")
 var seqNumber int32 = 0
 var conf = common.Config{}
+var nodeType = "publish"
 
 func init() {
 	// args
@@ -52,15 +53,17 @@ func main() {
 	}
 	logging.SetAllLoggers(lvl)
 
-  tcpEndPoint :=  "0.0.0.0:" + strconv.Itoa(common.StartPort + common.RandInt(0, common.Offset))
+  tcpEndPoint :=  common.LocalHost +
+                      ":" +
+                      strconv.Itoa(common.StartPort + common.RandInt(0, common.PortRange))
 	// create the waku node  
 	hostAddr, _ := net.ResolveTCPAddr("tcp", tcpEndPoint)
 	ctx := context.Background()
-	wakuNode, err := node.New(ctx,
+  pubNode, err := node.New(ctx,
 		node.WithHostAddress(hostAddr),
 		//node.WithNTP(),  // don't use NTP, fails at msec granularity
 		node.WithWakuRelay(),
-		node.WithWakuFilter(false),
+		//node.WithLightPush(), // no need to add lightpush to be a lightpush client! 
 	)
 	if err != nil {
 		panic(err)
@@ -86,80 +89,81 @@ func main() {
 		panic(err)
 	}
 
-	err = wakuNode.DialPeerWithMultiAddress(ctx, nodeList[0])
+	err = pubNode.DialPeerWithMultiAddress(ctx, nodeList[0])
 	if err != nil {
 		log.Error("could not connect to ", peerID, err)
 		panic(err)
 	}
 
-	log.Info("STARTING THE LIGHTPUSH NODE ", conf.ContentTopic)
-	// start the light node
-	err = wakuNode.Start()
+	log.Info("Starting the ", nodeType, " node ", conf.ContentTopic)
+	// start the pub node
+	err = pubNode.Start()
 	if err != nil {
-		log.Error("COULD NOT START THE LIGHTPUSH ", peerID, err)
+	  log.Error("Could not start the", nodeType, " node ", conf.ContentTopic)
 		panic(err)
 	}
 
-	go writeLoop(ctx, &conf, wakuNode)
+	go func() {
+	  log.Info("IN THE WRITELOOP ", conf.ContentTopic)
 
-	<-time.After(conf.Duration)
-  log.Error(conf.Duration, " elapsed, closing the node!");
+	  f, err := os.OpenFile(conf.Ofname,
+                    os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	  if err != nil {
+      log.Error("Could not open file: ", err)
+		  panic(err)
+	  }
+	  defer f.Close()
 
-	// shut the nodes down
-	wakuNode.Stop()
-}
+    prevTStamp := pubNode.Timesource().Now()
+	  for {
+		  time.Sleep(conf.Iat)
+      seqNumber++
 
-func writeLoop(ctx context.Context, conf *common.Config, wakuNode *node.WakuNode) {
-	log.Info("IN THE WRITELOOP ", conf.ContentTopic)
-
-	f, err := os.OpenFile(conf.Ofname, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-    log.Error("Could not open file: ", err)
-		panic(err)
-	}
-	defer f.Close()
-
-  prevTStamp := wakuNode.Timesource().Now()
-	for {
-		time.Sleep(conf.Iat)
-    seqNumber++
-
-		// build the message & seq number
-		p := new(payload.Payload)
-    wbuf := new(bytes.Buffer)
-    err := binary.Write(wbuf, binary.LittleEndian, seqNumber)
-    if err != nil {
+      // build the message with seq number //TODO: message size
+		  p := new(payload.Payload)
+      wbuf := new(bytes.Buffer)
+      err := binary.Write(wbuf, binary.LittleEndian, seqNumber)
+      if err != nil {
         log.Error("binary.Write failed:", err)
         panic(err)
-    }
-    p.Data = wbuf.Bytes()
-		var version uint32 = 0
-		payload, err := p.Encode(version)
-		if err != nil {
-			log.Error("Could not Encode: ", err)
-      panic(err)
-		}
-		msg := &pb.WakuMessage{
-			Payload:      payload,
-			Version:      version,
-			ContentTopic: conf.ContentTopic,
-			Timestamp:    utils.GetUnixEpochFrom(wakuNode.Timesource().Now()),
-		}
+      }
+      p.Data = wbuf.Bytes()
 
-		// publish the message
-		_, err = wakuNode.Relay().Publish(ctx, msg)
-		if err != nil {
-			log.Error("Could not publish: ", err)
-			return
-		}
+		  var version uint32 = 0
+		  payload, err := p.Encode(version)
+		  if err != nil {
+			  log.Error("Could not Encode: ", err)
+        panic(err)
+		  }
+		  msg := &pb.WakuMessage{
+			  Payload:      payload,
+			  Version:      version,
+			  ContentTopic: conf.ContentTopic,
+			  Timestamp:    utils.GetUnixEpochFrom(pubNode.Timesource().Now()),
+		  }
 
-    iat := time.Since(prevTStamp)
-		str := fmt.Sprintf("SENT: %d %s %d\n", seqNumber, msg, iat.Milliseconds())
-		if _, err = f.WriteString(str); err != nil {
-			panic(err)
-		}
-		log.Info(str)
-    prevTStamp = time.Unix(0, msg.Timestamp)
-	}
-  log.Error("Out of the Write loop: Message channel closed (timeout?)!")
+		  // publish the message
+		  _, err = pubNode.Relay().Publish(ctx, msg)
+		  if err != nil {
+			  log.Error("Could not publish: ", err)
+			  return
+		  }
+
+      iat := time.Since(prevTStamp)
+       str := fmt.Sprintf("SENT : %d, %s, %d, %d, %d\n", seqNumber, msg.ContentTopic, msg.Timestamp, iat.Microseconds(), iat.Milliseconds())
+		  //str := fmt.Sprintf("SENT: %d %s %d\n", seqNumber, msg, iat.Milliseconds())
+		  if _, err = f.WriteString(str); err != nil {
+			  panic(err)
+		  }
+		  log.Info(str)
+      prevTStamp = time.Unix(0, msg.Timestamp)
+	  }
+    log.Error("Out of the Write loop: Message channel closed - timeout")
+  }()
+
+	<-time.After(conf.Duration)
+  log.Error(conf.Duration, " elapsed, stopping the " + nodeType + " node!");
+
+	// shut the nodes down
+	pubNode.Stop()
 }

@@ -134,7 +134,7 @@ func main() {
       }
 
       msg_delay := time.Since(time.Unix(0, msg.Timestamp))
-      str := fmt.Sprintf("GOT : %d %s %d %d\n", r32, msg, msg_delay.Microseconds(), msg_delay.Milliseconds())
+      str := fmt.Sprintf("GOT : %d, %s, %d, %d, %d\n", r32, msg.ContentTopic, msg.Timestamp, msg_delay.Microseconds(), msg_delay.Milliseconds())
       //str := fmt.Sprintf("GOT: %d %s %s %s %s\n", r32, msg, utils.GetUnixEpochFrom(lightNode.Timesource().Now()), msg_delay.Microseconds(), msg_delay.Milliseconds())
 			//"Received msg, @", string(msg.ContentTopic), "@", msg.Timestamp, "@", utils.GetUnixEpochFrom(lightNode.Timesource().Now()) )
 			log.Info(str)

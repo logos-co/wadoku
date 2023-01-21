@@ -34,7 +34,7 @@ func ArgInit(conf *Config){
 		"Specify the interarrival time in millisecs")
 	flag.StringVar(&(*conf).LogLevel, "l", "info",
 		"Specify the log level")
-	flag.StringVar(&(*conf).Ofname, "o", "lightpush.out",
+	flag.StringVar(&(*conf).Ofname, "o", "output.out",
 		"Specify the output file")
 	flag.StringVar(&(*conf).ContentTopic, "c", "6b6fd7006afdfe916f08b5d",
 		"Specify the content topic")

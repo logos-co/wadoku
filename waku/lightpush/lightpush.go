@@ -62,7 +62,7 @@ func main() {
   lightNode, err := node.New(ctx,
 		node.WithHostAddress(hostAddr),
 		//node.WithNTP(),  // don't use NTP, fails at msec granularity
-		node.WithWakuRelay(),
+		//node.WithWakuRelay(),
 		//node.WithLightPush(), // no need to add lightpush to be a lightpush client! 
 	)
 	if err != nil {
@@ -150,7 +150,8 @@ func main() {
 		  }
 
       iat := time.Since(prevTStamp)
-		  str := fmt.Sprintf("SENT: %d %s %d\n", seqNumber, msg, iat.Milliseconds())
+       str := fmt.Sprintf("SENT : %d, %s, %d, %d, %d\n", seqNumber, msg.ContentTopic, msg.Timestamp, iat.Microseconds(), iat.Milliseconds())
+		  //str := fmt.Sprintf("SENT: %d %s %d\n", seqNumber, msg, iat.Milliseconds())
 		  if _, err = f.WriteString(str); err != nil {
 			  panic(err)
 		  }
