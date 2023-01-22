@@ -59,7 +59,7 @@ func main() {
 	// create the waku node  
 	hostAddr, _ := net.ResolveTCPAddr("tcp", tcpEndPoint)
 	ctx := context.Background()
-  lightNode, err := node.New(ctx,
+  lightpushNode, err := node.New(ctx,
 		node.WithHostAddress(hostAddr),
 		//node.WithNTP(),  // don't use NTP, fails at msec granularity
 		//node.WithWakuRelay(),
@@ -89,15 +89,36 @@ func main() {
 		panic(err)
 	}
 
+    // initialise the exponential back off
+  retries, sleepTime := 0, common.ExpBackOffInit
+  for {
+    // try / retry
+	  if err = lightpushNode.DialPeerWithMultiAddress(ctx, nodeList[0]); err == nil {
+      break // success! done
+    }
+    // failed, back off for sleepTime and retry
+    log.Error("could not connect to ", peerID, err,
+                " : will retry in ", sleepTime, " retry# ", retries)
+    time.Sleep(sleepTime)   // back off
+    retries++
+    sleepTime *= 2          // exponential : double the next wait time
+    // bail out
+    if retries > common.ExpBackOffRetries {
+      log.Error("Exhausted retries, could not connect to ", peerID, err,
+                  "number of retries performed ", retries)
+		  panic(err)
+    }
+  }
+  /*
 	err = lightNode.DialPeerWithMultiAddress(ctx, nodeList[0])
 	if err != nil {
 		log.Error("could not connect to ", peerID, err)
 		panic(err)
-	}
+	}*/
 
 	log.Info("Starting the ", nodeType, " node ", conf.ContentTopic)
 	// start the light node
-	err = lightNode.Start()
+	err = lightpushNode.Start()
 	if err != nil {
 	  log.Error("Could not start the", nodeType, " node ", conf.ContentTopic)
 		panic(err)
@@ -114,7 +135,7 @@ func main() {
 	  }
 	  defer f.Close()
 
-    prevTStamp := lightNode.Timesource().Now()
+    prevTStamp := lightpushNode.Timesource().Now()
 	  for {
 		  time.Sleep(conf.Iat)
       seqNumber++
@@ -139,11 +160,11 @@ func main() {
 			  Payload:      payload,
 			  Version:      version,
 			  ContentTopic: conf.ContentTopic,
-			  Timestamp:    utils.GetUnixEpochFrom(lightNode.Timesource().Now()),
+			  Timestamp:    utils.GetUnixEpochFrom(lightpushNode.Timesource().Now()),
 		  }
 
 		  // publish the message
-		  _, err = lightNode.Lightpush().Publish(ctx, msg)
+		  _, err = lightpushNode.Lightpush().Publish(ctx, msg)
 		  if err != nil {
 			  log.Error("Could not publish: ", err)
 			  return
@@ -165,5 +186,5 @@ func main() {
   log.Error(conf.Duration, " elapsed, stopping the " + nodeType + " node!");
 
 	// shut the nodes down
-	lightNode.Stop()
+	lightpushNode.Stop()
 }

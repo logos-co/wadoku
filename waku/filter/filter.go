@@ -87,11 +87,33 @@ func main() {
 		log.Error("could not get peerID: ", err)
 		panic(err)
 	}
+
+    // initialise the exponential back off
+  retries, sleepTime := 0, common.ExpBackOffInit
+  for {
+    // try / retry
+	  if err = filterNode.DialPeerWithMultiAddress(ctx, nodeList[0]); err == nil {
+      break // success! done
+    }
+    // failed, back off for sleepTime and retry
+    log.Error("could not connect to ", peerID, err,
+                " : will retry in ", sleepTime, " retry# ", retries)
+    time.Sleep(sleepTime)   // back off
+    retries++
+    sleepTime *= 2          // exponential : double the next wait time
+    // bail out
+    if retries > common.ExpBackOffRetries {
+      log.Error("Exhausted retries, could not connect to ", peerID, err,
+                  "number of retries performed ", retries)
+		  panic(err)
+    }
+  }
+  /*
 	err = filterNode.DialPeerWithMultiAddress(ctx, nodeList[0])
 	if err != nil {
 		log.Error("could not connect to ", peerID, err)
 		panic(err)
-	}
+	}*/
 
 	log.Info("Starting the ", nodeType, " node ", conf.ContentTopic)
 	// start the light node
