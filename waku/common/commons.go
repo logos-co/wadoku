@@ -11,9 +11,13 @@ const PortRange = 1000
 
 const GraceWait = 10 // percentage
 const InterPubSubDelay = 25 // seconds
+
 const DnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
 const NameServer = "1.1.1.1"
 const LocalHost = "0.0.0.0"
+
+const ExpBackOffInit time.Duration = 10*time.Second // 10s, 20s, 40s, 80s, 160s
+const ExpBackOffRetries int = 5
 
 type Config struct {
 	LogLevel     string
