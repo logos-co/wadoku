@@ -27,10 +27,18 @@ filter.out
 lightpush.out
 filter.log
 lightpush.log
+publish.out
+publish.log
+subscribe.out
+subscribe.log
 
 # output binaries
 waku-lightpush
 waku-filter
+waku-publish
+waku-subscribe
+libp2p-publish
+libp2p-subscribe
 
 # Test binary, built with `go test -c`
 *.test
