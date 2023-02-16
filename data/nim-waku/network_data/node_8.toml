@@ -1,0 +1,4 @@
+rpc-admin = true
+keep-alive = true
+metrics-server = true
+topics = "topic_M"

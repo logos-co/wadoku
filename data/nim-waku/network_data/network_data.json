@@ -1,0 +1,106 @@
+{
+  "node_0": {
+    "static_nodes": [
+      "node_1",
+      "node_9",
+      "node_6",
+      "node_3"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_0.toml"
+  },
+  "node_1": {
+    "static_nodes": [
+      "node_0",
+      "node_2",
+      "node_9",
+      "node_6"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_1.toml"
+  },
+  "node_2": {
+    "static_nodes": [
+      "node_1",
+      "node_3",
+      "node_9",
+      "node_5"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_2.toml"
+  },
+  "node_3": {
+    "static_nodes": [
+      "node_0",
+      "node_2",
+      "node_4",
+      "node_8"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_3.toml"
+  },
+  "node_4": {
+    "static_nodes": [
+      "node_3",
+      "node_5"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_4.toml"
+  },
+  "node_5": {
+    "static_nodes": [
+      "node_2",
+      "node_4",
+      "node_6"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_5.toml"
+  },
+  "node_6": {
+    "static_nodes": [
+      "node_0",
+      "node_1",
+      "node_5",
+      "node_7"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_6.toml"
+  },
+  "node_7": {
+    "static_nodes": [
+      "node_6",
+      "node_8"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_7.toml"
+  },
+  "node_8": {
+    "static_nodes": [
+      "node_3",
+      "node_7",
+      "node_9"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_8.toml"
+  },
+  "node_9": {
+    "static_nodes": [
+      "node_0",
+      "node_1",
+      "node_2",
+      "node_8"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_9.toml"
+  }
+}
