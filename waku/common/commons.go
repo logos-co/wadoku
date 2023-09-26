@@ -12,7 +12,7 @@ const PortRange = 1000
 const GraceWait = 10 // percentage
 const InterPubSubDelay = 25 // seconds
 
-const DnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
+const DnsDiscoveryUrl = "enrtree://ANEDLO25QVUGJOUTQFRYKWX6P4Z4GKVESBMHML7DZ6YK4LGS5FC5O@prod.wakuv2.nodes.status.im"
 const NameServer = "1.1.1.1"
 const LocalHost = "0.0.0.0"
 

@@ -31,7 +31,7 @@ var log = logging.Logger("filter")
 var pubSubTopic = protocol.DefaultPubsubTopic()
 var conf = common.Config{}
 var nodeType = "filter"
-//const dnsDiscoveryUrl = "enrtree://AOGECG2SPND25EEFMAJ5WF3KSGJNSGV356DSTL2YVLLZWIV6SAYBM@prod.waku.nodes.status.im"
+//const dnsDiscoveryUrl = "enrtree://ANEDLO25QVUGJOUTQFRYKWX6P4Z4GKVESBMHML7DZ6YK4LGS5FC5O@prod.wakuv2.nodes.status.im"
 //const nameServer = "1.1.1.1" // your local dns provider might be blocking entr
 
 
